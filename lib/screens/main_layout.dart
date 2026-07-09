@@ -5,6 +5,8 @@ import 'package:admin_portal/screens/users_screen.dart';
 import 'package:admin_portal/screens/listings_screen.dart';
 import 'package:admin_portal/screens/settings_screen.dart';
 import 'package:admin_portal/screens/tickets_screen.dart';
+import 'package:admin_portal/screens/login_screen.dart';
+import 'package:admin_portal/services/api_service.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -24,8 +26,20 @@ class _MainLayoutState extends State<MainLayout> {
     const SettingsScreen(),
   ];
 
+  String _getUserInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty || parts[0].isEmpty) return 'AD';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = ApiService.currentUser ?? {'name': 'Administrator', 'role': 'admin'};
+    final userName = user['name'] ?? 'Administrator';
+    final userRole = user['role'] == 'admin' ? 'Super Admin' : user['role'] ?? 'Admin';
+    final initials = _getUserInitials(userName);
+
     return Scaffold(
       body: Row(
         children: [
@@ -101,8 +115,10 @@ class _MainLayoutState extends State<MainLayout> {
                   child: PopupMenuButton<String>(
                     offset: const Offset(50, 0),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    onSelected: (value) {
+                    onSelected: (value) async {
                       if (value == 'logout') {
+                        await ApiService.logout();
+                        if (!mounted) return;
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
                       } else if (value == 'theme') {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Theme switched!')));
@@ -127,19 +143,19 @@ class _MainLayoutState extends State<MainLayout> {
                             ),
                             child: Row(
                               children: [
-                                const CircleAvatar(
+                                CircleAvatar(
                                   radius: 18,
                                   backgroundColor: AppTheme.textPrimary,
-                                  child: Text('JD', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                                  child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
-                                      Text('John Doe', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 14), overflow: TextOverflow.ellipsis),
-                                      Text('Super Admin', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                    children: [
+                                      Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 14), overflow: TextOverflow.ellipsis),
+                                      Text(userRole, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                                     ],
                                   ),
                                 ),
@@ -147,10 +163,10 @@ class _MainLayoutState extends State<MainLayout> {
                               ],
                             ),
                           )
-                        : const CircleAvatar(
+                        : CircleAvatar(
                             radius: 20,
                             backgroundColor: AppTheme.textPrimary,
-                            child: Text('JD', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                            child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                           ),
                   ),
                 ),

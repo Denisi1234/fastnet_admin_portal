@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:admin_portal/theme/app_theme.dart';
 import 'package:admin_portal/screens/login_screen.dart';
 import 'package:admin_portal/core/settings_controller.dart';
+import 'package:admin_portal/services/api_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.init();
   runApp(const AdminPortalApp());
 }
 

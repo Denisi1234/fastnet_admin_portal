@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:admin_portal/theme/app_theme.dart';
+import 'package:admin_portal/services/api_service.dart';
 
 class ListingsScreen extends StatefulWidget {
   const ListingsScreen({super.key});
@@ -11,63 +12,56 @@ class ListingsScreen extends StatefulWidget {
 class _ListingsScreenState extends State<ListingsScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Map<String, dynamic>? _drawerSelectedListing;
-
-  final List<Map<String, dynamic>> _listings = [
-    {
-      'title': 'Luxury Beach Villa',
-      'host': 'Alice Smith',
-      'price': '\$250/night',
-      'status': 'Active',
-      'images': [
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80',
-      ],
-      'location': 'Malibu, California',
-      'amenities': ['Beachfront', 'Pool', 'Wifi', 'AC'],
-    },
-    {
-      'title': 'Downtown Loft',
-      'host': 'Bob Jones',
-      'price': '\$120/night',
-      'status': 'Active',
-      'images': [
-        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80',
-      ],
-      'location': 'New York City, New York',
-      'amenities': ['City View', 'Wifi', 'Kitchen', 'Gym'],
-    },
-    {
-      'title': 'Cozy Cabin',
-      'host': 'Diana Prince',
-      'price': '\$95/night',
-      'status': 'Pending',
-      'images': [
-        'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=600&q=80',
-      ],
-      'location': 'Aspen, Colorado',
-      'amenities': ['Fireplace', 'Mountain View', 'Hot Tub'],
-    },
-    {
-      'title': 'Fake Listing 123',
-      'host': 'Scammer Joe',
-      'price': '\$10/night',
-      'status': 'Removed',
-      'images': [
-        'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80',
-      ],
-      'location': 'Unknown Location',
-      'amenities': [],
-    },
-  ];
+  List<Map<String, dynamic>> _listings = [];
+  bool _isLoading = true;
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _statusFilter = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
+
+  Future<void> _loadListings() async {
+    setState(() => _isLoading = true);
+    final list = await ApiService.fetchProperties();
+    if (mounted) {
+      setState(() {
+        _listings = list.map<Map<String, dynamic>>((p) {
+          final hostName = p['host'] != null ? p['host']['name'] : 'Unknown Host';
+          final priceStr = p['price_per_night'] != null ? '\$${double.tryParse(p['price_per_night'].toString())?.toStringAsFixed(0) ?? p['price_per_night']}/night' : '\$100/night';
+          final locationStr = p['address'] != null ? "${p['address']}, ${p['city']}" : p['city'] ?? 'Unknown Location';
+          final imgUrl = p['image_url'] != null && p['image_url'].toString().isNotEmpty
+              ? p['image_url']
+              : 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80';
+          
+          return {
+            'id': p['id'],
+            'title': p['name'] ?? 'Property',
+            'host': hostName,
+            'price': priceStr,
+            'status': p['status'] ?? 'Active',
+            'images': [imgUrl],
+            'location': locationStr,
+            'amenities': ['Wifi', 'AC', 'Kitchen'],
+            'raw_property': p,
+          };
+        }).toList();
+
+        if (_drawerSelectedListing != null) {
+          final selectedId = _drawerSelectedListing!['id'];
+          final found = _listings.firstWhere((l) => l['id'] == selectedId, orElse: () => {});
+          if (found.isNotEmpty) {
+            _drawerSelectedListing = found;
+          }
+        }
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -75,16 +69,26 @@ class _ListingsScreenState extends State<ListingsScreen> {
     super.dispose();
   }
 
-  void _updateListingStatus(Map<String, dynamic> listing, String newStatus) {
-    setState(() {
-      listing['status'] = newStatus;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${listing['title']} is now $newStatus'),
-        backgroundColor: newStatus == 'Active' ? AppTheme.success : AppTheme.danger,
-      ),
-    );
+  void _updateListingStatus(Map<String, dynamic> listing, String newStatus) async {
+    setState(() => _isLoading = true);
+    final success = await ApiService.updatePropertyStatus(listing['id'], newStatus);
+    if (success) {
+      await _loadListings();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listing['title']} status is now $newStatus'),
+          backgroundColor: newStatus == 'Active' ? AppTheme.success : AppTheme.danger,
+        ),
+      );
+    } else {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update property status.'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+    }
   }
 
   void _showListingDetails(Map<String, dynamic> listing) {
@@ -121,33 +125,35 @@ class _ListingsScreenState extends State<ListingsScreen> {
       key: _scaffoldKey,
       backgroundColor: Colors.transparent,
       endDrawer: _buildListingDetailsDrawer(),
-      body: Padding(
-        padding: const EdgeInsets.all(40.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Property Listings',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Search & Filter Panel
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: Row(
+      body: _isLoading 
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          : Padding(
+              padding: const EdgeInsets.all(40.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 3,
+                  const Text(
+                    'Property Listings',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Search & Filter Panel
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
                     child: TextField(
                       controller: _searchController,
                       onChanged: (val) {
