@@ -1,12 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8000/api';
+  static String get baseUrl {
+    const bool isProduction = false;
+    if (isProduction) return 'https://api.fastnet.co.tz/api';
+    return 'http://localhost:8000/api';
+  }
+
   static String? _token;
   static Map<String, dynamic>? currentUser;
+
+  static const Duration _timeout = Duration(seconds: 15);
 
   static Future<void> init() async {
     try {
@@ -63,7 +71,7 @@ class ApiService {
         Uri.parse('$baseUrl/login'),
         headers: _headers,
         body: jsonEncode({'email': email, 'password': password}),
-      );
+      ).timeout(_timeout);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final user = data['user'] as Map<String, dynamic>;
@@ -92,7 +100,7 @@ class ApiService {
         await http.post(
           Uri.parse('$baseUrl/logout'),
           headers: _headers,
-        );
+        ).timeout(_timeout);
       }
     } catch (e) {
       debugPrint('API Logout Error: $e');
@@ -110,7 +118,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/admin/users'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
       if (response.statusCode == 200) {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.map((item) => Map<String, dynamic>.from(item)).toList();
@@ -127,7 +135,7 @@ class ApiService {
         Uri.parse('$baseUrl/admin/users/$userId/status'),
         headers: _headers,
         body: jsonEncode({'status': newStatus}),
-      );
+      ).timeout(_timeout);
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('API Update User Status Error: $e');
@@ -141,7 +149,7 @@ class ApiService {
         Uri.parse('$baseUrl/admin/users'),
         headers: _headers,
         body: jsonEncode(userData),
-      );
+      ).timeout(_timeout);
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       debugPrint('API Add User Error: $e');
@@ -158,7 +166,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/admin/properties'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
       if (response.statusCode == 200) {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.map((item) => Map<String, dynamic>.from(item)).toList();
@@ -175,7 +183,7 @@ class ApiService {
         Uri.parse('$baseUrl/admin/properties/$propertyId/status'),
         headers: _headers,
         body: jsonEncode({'status': newStatus}),
-      );
+      ).timeout(_timeout);
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('API Update Property Status Error: $e');
@@ -192,7 +200,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/tickets'),
         headers: _headers,
-      );
+      ).timeout(_timeout);
       if (response.statusCode == 200) {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.map((item) => Map<String, dynamic>.from(item)).toList();
@@ -209,7 +217,7 @@ class ApiService {
         Uri.parse('$baseUrl/tickets/$ticketId/messages'),
         headers: _headers,
         body: jsonEncode({'text': text}),
-      );
+      ).timeout(_timeout);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
@@ -225,7 +233,7 @@ class ApiService {
         Uri.parse('$baseUrl/tickets/$ticketId/status'),
         headers: _headers,
         body: jsonEncode({'status': status}),
-      );
+      ).timeout(_timeout);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
@@ -233,5 +241,140 @@ class ApiService {
       debugPrint('API Update Ticket Status Error: $e');
     }
     return null;
+  }
+
+  // ---------------------------------------------------------
+  // ADMIN BOOKINGS METHODS
+  // ---------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> fetchAdminBookings() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/bookings'),
+        headers: _headers,
+      ).timeout(_timeout);
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('API Fetch Admin Bookings Error: $e');
+    }
+    return [];
+  }
+
+  static Future<bool> updateBookingStatus(int bookingId, String status) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/admin/bookings/$bookingId/status'),
+        headers: _headers,
+        body: jsonEncode({'status': status}),
+      ).timeout(_timeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('API Update Booking Status Error: $e');
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------
+  // ADMIN PAYMENTS METHODS
+  // ---------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> fetchAdminPayments() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/payments'),
+        headers: _headers,
+      ).timeout(_timeout);
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('API Fetch Admin Payments Error: $e');
+    }
+    return [];
+  }
+
+  // ---------------------------------------------------------
+  // ADMIN LODGE SERVICE REQUESTS
+  // ---------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> fetchAdminLodgeRequests() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/lodge-requests'),
+        headers: _headers,
+      ).timeout(_timeout);
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('API Fetch Admin Lodge Requests Error: $e');
+    }
+    return [];
+  }
+
+  // ---------------------------------------------------------
+  // ADMIN STAFF MANAGEMENT
+  // ---------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> fetchAdminStaff() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/staff'),
+        headers: _headers,
+      ).timeout(_timeout);
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('API Fetch Admin Staff Error: $e');
+    }
+    return [];
+  }
+
+  static Future<bool> addStaffMember(Map<String, dynamic> staffData) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/staff'),
+        headers: _headers,
+        body: jsonEncode(staffData),
+      ).timeout(_timeout);
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      debugPrint('API Add Staff Error: $e');
+    }
+    return false;
+  }
+
+  static Future<bool> updateStaffMember(int id, Map<String, dynamic> updates) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/staff/$id'),
+        headers: _headers,
+        body: jsonEncode(updates),
+      ).timeout(_timeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('API Update Staff Error: $e');
+    }
+    return false;
+  }
+
+  static Future<bool> deleteStaffMember(int id) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/staff/$id'),
+        headers: _headers,
+      ).timeout(_timeout);
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      debugPrint('API Delete Staff Error: $e');
+    }
+    return false;
   }
 }

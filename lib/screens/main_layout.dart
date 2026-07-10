@@ -3,8 +3,14 @@ import 'package:admin_portal/theme/app_theme.dart';
 import 'package:admin_portal/screens/dashboard_screen.dart';
 import 'package:admin_portal/screens/users_screen.dart';
 import 'package:admin_portal/screens/listings_screen.dart';
-import 'package:admin_portal/screens/settings_screen.dart';
 import 'package:admin_portal/screens/tickets_screen.dart';
+import 'package:admin_portal/screens/bookings_screen.dart';
+import 'package:admin_portal/screens/payments_screen.dart';
+import 'package:admin_portal/screens/lodge_requests_screen.dart';
+import 'package:admin_portal/screens/staff_screen.dart';
+import 'package:admin_portal/screens/settings_screen.dart';
+import 'package:admin_portal/screens/analytics_screen.dart';
+import 'package:admin_portal/screens/announcements_screen.dart';
 import 'package:admin_portal/screens/login_screen.dart';
 import 'package:admin_portal/services/api_service.dart';
 
@@ -19,11 +25,17 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const DashboardScreen(),
-    const UsersScreen(),
-    const ListingsScreen(),
-    const TicketsScreen(),
-    const SettingsScreen(),
+    const DashboardScreen(),      // 0
+    const UsersScreen(),           // 1
+    const ListingsScreen(),        // 2
+    const TicketsScreen(),         // 3
+    const BookingsScreen(),        // 4
+    const PaymentsScreen(),        // 5
+    const LodgeRequestsScreen(),   // 6
+    const StaffScreen(),           // 7
+    const AnalyticsScreen(),       // 8
+    const AnnouncementsScreen(),   // 9
+    const SettingsScreen(),        // 10
   ];
 
   String _getUserInitials(String name) {
@@ -102,6 +114,36 @@ class _MainLayoutState extends State<MainLayout> {
                 label: Text('Tickets'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.book_online_outlined),
+                selectedIcon: Icon(Icons.book_online),
+                label: Text('Bookings'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.payments_outlined),
+                selectedIcon: Icon(Icons.payments),
+                label: Text('Payments'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.room_service_outlined),
+                selectedIcon: Icon(Icons.room_service),
+                label: Text('Requests'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.badge_outlined),
+                selectedIcon: Icon(Icons.badge),
+                label: Text('Staff'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart),
+                label: Text('Analytics'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.campaign_outlined),
+                selectedIcon: Icon(Icons.campaign),
+                label: Text('Announcements'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.settings_outlined),
                 selectedIcon: Icon(Icons.settings),
                 label: Text('Settings'),
@@ -123,7 +165,7 @@ class _MainLayoutState extends State<MainLayout> {
                       } else if (value == 'theme') {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Theme switched!')));
                       } else if (value == 'profile') {
-                        setState(() => _selectedIndex = 4); // Go to settings
+                        setState(() => _selectedIndex = 10); // Go to settings
                       }
                     },
                     itemBuilder: (context) => [
